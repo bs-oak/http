@@ -16,15 +16,34 @@ module Dict = struct
     | Some new_value -> add key' new_value dict
 end
 
+(* parts *)
+
+type part = 
+  | StringPart of string * string
+  | FilePart of string * BsOakFile.File.t
+
+let string_part k v =
+  StringPart (k, v)
+
+let file_part k v =
+  FilePart (k, v)
+
+(* form data *)
+
 module FormData = struct
   type t
 
   external make : unit -> t = "FormData" [@@bs.new]
-  external append : t -> string -> string -> unit = "append" [@@bs.send]
+  external append_string : t -> string -> string -> unit = "append" [@@bs.send]
+  external append_file : t -> string -> BsOakFile.File.t -> unit = "append" [@@bs.send]
 
-  let from_list pairs =
-    let append_pair t (k, v) = append t k v; t in
-    List.fold_left append_pair (make ()) pairs
+  let append_part part t =
+    match part with 
+    | StringPart (k, v) -> append_string t k v
+    | FilePart (k, v) -> append_file t k v
+
+  let from_parts parts =
+    List.fold_left (fun t part -> append_part part t; t) (make ()) parts
 end
 
 module XMLHttpRequest = struct
@@ -101,12 +120,6 @@ type header = Header of string * string
 let header k v =
   Header (k,v)
 
-(* parts *)
-
-type part = Part of string * string
-
-let string_part k v =
-  Part (k, v)
 
 (* body *)
 
@@ -125,9 +138,7 @@ let string_body v1 v2 =
   StringBody (v1, v2)
 
 let multipart_body parts =
-  let part_to_pair (Part (k,v)) = (k,v) in
-  let pairs = List.map part_to_pair parts in
-  FormDataBody (FormData.from_list pairs)
+  FormDataBody (FormData.from_parts parts)
 
 (* response *)
 
