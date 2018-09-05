@@ -12,6 +12,8 @@ type part
 
 val string_part : string -> string -> part
 
+val file_part : string -> BsOakFile.File.t -> part
+
 (* body *)
 
 type body
